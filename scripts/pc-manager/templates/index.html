@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ThresholdEcho v2.0</title>
+<style>
+/* ═══════════════ 全局 & 变量 ═══════════ */
+:root {
+  --bg:         #0d1117;
+  --bg-card:    #161b22;
+  --bg-hover:   #1c2333;
+  --border:     #30363d;
+  --text:       #c9d1d9;
+  --text-dim:   #8b949e;
+  --accent:     #a371f7;
+  --accent-dim: #7c3aed;
+  --green:      #3fb950;
+  --red:        #f85149;
+  --orange:     #d2991d;
+  --blue:       #58a6ff;
+  --radius:     10px;
+  --shadow:     0 2px 12px rgba(0,0,0,.4);
+  --transition: .2s ease;
+  --font:       "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+}
+* { margin:0;padding:0;box-sizing:border-box }
+body { background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh;overflow:hidden }
+a { color:var(--accent);text-decoration:none }
+::-webkit-scrollbar { width:6px }
+::-webkit-scrollbar-track { background:var(--bg) }
+::-webkit-scrollbar-thumb { background:var(--border);border-radius:3px }
+
+/* ═══════════════ 侧边栏 ═══════════ */
+.sidebar {
+  width:220px; background:var(--bg-card); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; flex-shrink:0; padding:20px 0;
+}
+.sidebar .logo { padding:0 20px 24px; font-size:18px; font-weight:700; color:var(--accent) }
+.sidebar .logo span { color:var(--text-dim);font-size:12px;display:block;font-weight:400 }
+.sidebar nav { flex:1 }
+.sidebar nav a {
+  display:flex; align-items:center; gap:10px; padding:10px 20px; color:var(--text-dim);
+  font-size:14px; transition:var(--transition); border-left:3px solid transparent;
+}
+.sidebar nav a:hover, .sidebar nav a.active {
+  color:var(--text); background:var(--bg-hover); border-left-color:var(--accent);
+}
+.sidebar .status-bar { padding:16px 20px; border-top:1px solid var(--border); font-size:12px; color:var(--text-dim) }
+.sidebar .status-bar .dot { display:inline-block; width:8px;height:8px;border-radius:50%;margin-right:6px }
+.sidebar .status-bar .dot.on { background:var(--green) }
+.sidebar .status-bar .dot.off { background:var(--red) }
+
+/* ═══════════════ 主区域 ═══════════ */
+.main { flex:1;overflow-y:auto;padding:28px 32px }
+.main .title-row { display:flex;justify-content:space-between;align-items:center;margin-bottom:24px }
+.main h1 { font-size:22px;font-weight:600 }
+.btn {
+  padding:8px 18px;border-radius:var(--radius);font-size:14px;cursor:pointer;
+  border:none;font-weight:500;transition:var(--transition);display:inline-flex;align-items:center;gap:6px
+}
+.btn-primary { background:var(--accent-dim);color:#fff }
+.btn-primary:hover { background:var(--accent) }
+.btn-danger { background:transparent;color:var(--red);border:1px solid var(--red) }
+.btn-danger:hover { background:var(--red);color:#fff }
+.btn-outline { background:transparent;color:var(--text);border:1px solid var(--border) }
+.btn-outline:hover { background:var(--bg-hover) }
+.btn-sm { padding:4px 12px;font-size:12px }
+
+/* ═══════════════ 面板 ═══════════ */
+.panel { display:none }
+.panel.active { display:block }
+.section { display:none }
+.section.active { display:block }
+
+/* ═══════════════ 卡片 ═══════════ */
+.cards { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px }
+.card {
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;transition:var(--transition);box-shadow:var(--shadow)
+}
+.card:hover { border-color:var(--accent-dim) }
+.card .card-icon { font-size:28px;margin-bottom:8px }
+.card .card-label { font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px }
+.card .card-value { font-size:24px;font-weight:700;margin:4px 0 }
+.card .card-sub { font-size:12px;color:var(--text-dim) }
+
+.detail-card {
+  background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;margin-bottom:16px;box-shadow:var(--shadow)
+}
+.detail-card h3 { font-size:16px;color:var(--accent);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border) }
+
+/* ═══════════════ 进度条 ═══════════ */
+.bar-wrap { background:var(--bg);border-radius:6px;height:8px;margin:6px 0;overflow:hidden }
+.bar-fill { height:100%;border-radius:6px;transition:width .5s ease }
+.bar-fill.good { background:var(--green) }
+.bar-fill.warn { background:var(--orange) }
+.bar-fill.danger { background:var(--red) }
+
+/* ═══════════════ 表格 ═══════════ */
+.data-table { width:100%;border-collapse:collapse;font-size:13px }
+.data-table th { text-align:left;padding:10px 12px;color:var(--text-dim);font-weight:500;border-bottom:1px solid var(--border);font-size:11px;text-transform:uppercase }
+.data-table td { padding:10px 12px;border-bottom:1px solid var(--border) }
+.data-table tr:hover { background:var(--bg-hover) }
+.data-table .mono { font-family:"Cascadia Code","Consolas",monospace;font-size:12px }
+
+/* ═══════════════ AI 控制台 ═══════════ */
+.ai-console { background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:20px }
+.ai-console h3 { color:var(--accent);margin-bottom:12px }
+.cmd-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:12px }
+.cmd-btn {
+  background:var(--bg);border:1px solid var(--border);color:var(--text);padding:10px 14px;
+  border-radius:var(--radius);font-size:13px;text-align:left;cursor:pointer;transition:var(--transition);width:100%
+}
+.cmd-btn:hover { border-color:var(--accent);background:var(--bg-hover) }
+.cmd-btn .cmd-name { font-weight:500;color:var(--blue) }
+.cmd-btn .cmd-desc { font-size:11px;color:var(--text-dim);margin-top:2px }
+
+/* ═══════════════ 加载动画 ═══════════ */
+.skeleton { background:linear-gradient(90deg,var(--bg-card) 25%,var(--bg-hover) 50%,var(--bg-card) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--radius) }
+@keyframes shimmer { 0%{background-position:200% 0}100%{background-position:-200% 0} }
+
+.toast { position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:var(--radius);color:#fff;font-size:14px;z-index:999;animation:fadeIn .3s;box-shadow:var(--shadow) }
+.toast.success { background:var(--green) }
+.toast.error { background:var(--red) }
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)} }
+
+.timestamp { font-size:11px;color:var(--text-dim) }
+.badge { display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:500 }
+.badge-ok { background:#1a3a2a;color:var(--green) }
+.badge-warn { background:#3a2a1a;color:var(--orange) }
+.badge-err { background:#3a1a1a;color:var(--red) }
+
+/* ── 聊天面板 ── */
+.chat-container { display:flex;flex-direction:column;height:calc(100vh - 140px);min-height:400px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden }
+.chat-messages { flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px }
+.chat-msg { display:flex;gap:10px;align-items:flex-start;animation:fadeIn .3s ease }
+.chat-msg.user { flex-direction:row-reverse }
+.chat-avatar { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0 }
+.chat-msg.bot .chat-avatar { background:#1a2332 }
+.chat-msg.user .chat-avatar { background:#2a1a3a }
+.chat-bubble { max-width:75%;padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.5;word-break:break-word }
+.chat-msg.bot .chat-bubble { background:var(--bg);border-bottom-left-radius:4px }
+.chat-msg.user .chat-bubble { background:var(--accent);color:#fff;border-bottom-right-radius:4px }
+.chat-bubble p { margin:4px 0 }
+.chat-bubble code { background:rgba(255,255,255,.1);padding:1px 5px;border-radius:3px;font-size:12px }
+.chat-bubble pre { background:rgba(0,0,0,.3);padding:8px 12px;border-radius:6px;overflow-x:auto;font-size:11px }
+.chat-input-row { display:flex;align-items:center;padding:12px;border-top:1px solid var(--border);background:var(--bg) }
+.chat-input { flex:1;padding:10px 14px;background:var(--bg-card);border:1px solid var(--border);border-radius:20px;color:var(--text);font-size:13px;outline:none }
+.chat-input:focus { border-color:var(--accent) }
+.typing-dots { display:flex;gap:4px;padding:4px }
+.typing-dots span { width:6px;height:6px;border-radius:50%;background:var(--text-dim);animation:typing 1.4s infinite }
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes typing { 0%,60%,100%{opacity:.3} 30%{opacity:1} }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ 侧边栏 ═══════════════  -->
+<aside class="sidebar">
+  <div class="logo">🌫️ ThresholdEcho<span>Liminal Guardian</span></div>
+  <nav>
+    <a href="#dashboard" class="active" onclick="switchPanel('dashboard')">📊 仪表盘</a>
+    <a href="#hardware" onclick="switchPanel('hardware')">🖥️ 硬件</a>
+    <a href="#storage" onclick="switchPanel('storage')">💾 存储</a>
+    <a href="#software" onclick="switchPanel('software')">📦 软件</a>
+    <a href="#usb" onclick="switchPanel('usb')">🔌 外接设备</a>
+    <a href="#checkup" onclick="switchPanel('checkup')">🏥 一键体检</a>
+    <a href="#cleanup" onclick="switchPanel('cleanup')">🧹 垃圾清理</a>
+    <a href="#security" onclick="switchPanel('security')">🛡️ 安全中心</a>
+    <a href="#network" onclick="switchPanel('network')">🌐 网络</a>
+    <a href="#processes" onclick="switchPanel('processes')">⚙️ 进程</a>
+    <a href="#ai" onclick="switchPanel('ai')">🤖 AI 控制台</a>
+  </nav>
+  <div class="status-bar">
+    <span class="dot on"></span> 在线 · <span id="lastUpdate">--</span>
+  </div>
+</aside>
+
+<!-- ═══════════════ 主区域 ═══════════════  -->
+<main class="main" id="mainContent">
+  <div class="title-row">
+    <h1>📊 系统仪表盘</h1>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" onclick="refreshData()">🔄 刷新</button>
+    </div>
+  </div>
+  <div id="dashboard" class="panel active">
+    <div class="cards" id="dashCards"></div>
+    <div class="detail-card">
+      <h3>实时进程 TOP 5</h3>
+      <table class="data-table" id="topProcesses"><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div id="hardware" class="panel"><div class="detail-card"><h3>硬件详情</h3><div class="cards" id="hwCards"></div></div></div>
+  <div id="storage" class="panel"><div class="detail-card"><h3>磁盘分区</h3><div id="diskList"></div></div><div class="detail-card"><h3>大文件 TOP 10</h3><table class="data-table" id="bigFiles"><tbody></tbody></table></div></div>
+  <div id="software" class="panel"><div class="detail-card"><h3>已安装软件</h3><p class="timestamp" id="swCount"></p><div style="max-height:500px;overflow-y:auto"><table class="data-table" id="swTable"><tbody></tbody></table></div></div><div class="detail-card"><h3>启动项</h3><table class="data-table" id="startupTable"><tbody></tbody></table></div></div>
+  <div id="usb" class="panel"><div class="detail-card"><h3>当前 USB 设备</h3><div id="usbCurrent"></div></div><div class="detail-card"><h3>USB 历史记录</h3><table class="data-table" id="usbHistory"><tbody></tbody></table></div><div class="detail-card"><h3>显示器</h3><div id="monitorList"></div></div></div>
+  <div id="security" class="panel">
+    <div class="detail-card"><h3>Windows Defender</h3><div id="defStatus"></div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn btn-primary" onclick="triggerDefenderScan('QuickScan')">🔍 快速扫描</button>
+        <button class="btn btn-outline" onclick="triggerDefenderScan('FullScan')">🔎 全盘扫描 ⚠ 慢</button>
+      </div>
+    </div>
+    <div class="detail-card"><h3>威胁历史</h3><table class="data-table" id="threatTable"><tbody></tbody></table></div>
+    <div class="detail-card"><h3>防火墙</h3><div id="fwStatus"></div></div>
+  </div>
+  <div id="checkup" class="panel">
+    <div id="checkupHeader" class="detail-card" style="text-align:center;padding:32px 20px">
+      <div style="font-size:64px" id="checkupEmoji">🏥</div>
+      <div id="checkupScoreDisplay" style="font-size:48px;font-weight:700;margin:12px 0;color:var(--accent)">--</div>
+      <div id="checkupGrade" style="font-size:20px"></div>
+      <div class="timestamp" id="checkupTs"></div>
+      <div id="checkupSummary" style="margin:12px 0;font-size:14px"></div>
+      <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
+        <button class="btn btn-primary" onclick="refreshCheckup()">🔄 重新体检</button>
+        <button class="btn btn-primary" id="oneClickFixBtn" style="display:none;background:var(--green)" onclick="executeOneClickFix()">✨ 一键修复</button>
+      </div>
+      <div id="checkupFixProgress" style="display:none;margin-top:16px"></div>
+    </div>
+    <div class="detail-card"><h3>📊 各维度评分</h3><div id="checkupItems"></div></div>
+    <div class="detail-card"><h3>💡 优化建议</h3><div id="checkupSuggestions"></div></div>
+    <div id="checkupFixReport" class="detail-card" style="display:none"></div>
+  </div>
+  <div id="cleanup" class="panel">
+    <div id="cleanupLoading" class="detail-card" style="text-align:center;padding:24px">⏳ 正在扫描垃圾文件...</div>
+    <div id="cleanupContent" style="display:none">
+      <div class="detail-card" style="text-align:center;padding:20px">
+        <div style="font-size:40px">🗑️</div>
+        <div style="font-size:28px;font-weight:700;margin:8px 0" id="cleanupTotalText">--</div>
+        <div class="timestamp">可清理垃圾文件总计</div>
+        <div style="margin-top:12px">
+          <button class="btn btn-outline btn-sm" onclick="selectAllCleanup(true)">全选</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="selectAllCleanup(false)">取消全选</button>
+        </div>
+      </div>
+      <div class="detail-card">
+        <h3>垃圾分类详情</h3>
+        <div id="cleanupCategories"></div>
+        <div style="margin-top:16px;display:flex;gap:8px">
+          <button class="btn btn-primary" id="cleanupExecuteBtn" onclick="executeCleanup()">🧹 清理选中项</button>
+          <span class="timestamp" style="align-self:center">仅删除选中类别，不删重要文件</span>
+        </div>
+      </div>
+      <div id="cleanupResult" class="detail-card" style="display:none"></div>
+    </div>
+  </div>
+  <div id="network" class="panel"><div class="detail-card"><h3>网络适配器</h3><div id="netInfo"></div></div></div>
+  <div id="processes" class="panel"><div class="detail-card"><h3>进程列表 (TOP 15 内存)</h3><table class="data-table" id="procTable"><tbody></tbody></table></div></div>
+  <div id="ai" class="panel">
+    <div class="chat-container">
+      <div style="padding:8px 12px;background:var(--bg);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:12px">
+        <span id="chatBackendLabel" style="color:var(--text-dim)">⚙ 后端:</span>
+        <span id="chatBackendStatus" style="color:var(--orange)">检测中...</span>
+        <button class="btn btn-outline btn-sm" onclick="toggleChatSettings()" style="margin-left:auto;font-size:11px">🔧 设置</button>
+      </div>
+      <div id="chatSettingsBox" style="display:none;padding:12px;background:var(--bg);border-bottom:1px solid var(--border)">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <input type="text" id="cfgEndpoint" class="chat-input" placeholder="API Endpoint (如 http://127.0.0.1:18789/v1/chat/completions)" style="font-size:11px">
+          <input type="password" id="cfgKey" class="chat-input" placeholder="API Key" style="font-size:11px">
+          <input type="text" id="cfgModel" class="chat-input" placeholder="Model (如 deepseek/deepseek-v4-flash)" style="font-size:11px">
+          <div style="display:flex;gap:6px;justify-content:flex-end">
+            <button class="btn btn-outline btn-sm" onclick="toggleChatSettings()">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="saveChatConfig()">💾 保存</button>
+          </div>
+        </div>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        <div class="chat-msg bot">
+          <div class="chat-avatar">🤖</div>
+          <div class="chat-bubble">你好！我是 AI 助手，可以帮你解读系统数据、提优化建议、回答电脑问题。有什么需要？</div>
+        </div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" class="chat-input" placeholder="输入消息... (Enter 发送)"
+               onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}">
+        <button class="btn btn-primary btn-sm" onclick="sendChat()" style="margin-left:8px;white-space:nowrap">发送</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ═══════════════ 核心 ═══════════════
+const API = '/api/scan';
+let scanCache = null;
+
+async function loadData(force=false) {
+  try {
+    const qs = force ? '?force=1' : '';
+    const r = await fetch(API + qs);
+    scanCache = await r.json();
+    if (scanCache.error) { toast(scanCache.error, 'error'); return }
+    document.getElementById('lastUpdate').textContent = scanCache.timestamp?.slice(-8) || '--';
+    renderAll();
+  } catch(e) { toast('连接失败: ' + e.message, 'error') }
+}
+
+function refreshData() {
+  const btn = event.target.closest('button');
+  const orig = btn.innerHTML;
+  btn.innerHTML = '⏳ 刷新中...';
+  btn.disabled = true;
+  loadData(true).finally(() => { btn.innerHTML = orig; btn.disabled = false });
+}
+
+// ═══════════════ 导航 ═══════════════
+function switchPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  document.getElementById(name)?.classList.add('active');
+  document.querySelector(`nav a[href="#${name}"]`)?.classList.add('active');
+  document.querySelector('.main h1').textContent =
+    {dashboard:'📊 系统仪表盘',hardware:'🖥️ 硬件详情',storage:'💾 存储管理',software:'📦 软件管理',
+     usb:'🔌 外接设备',security:'🛡️ 安全中心',checkup:'🏥 一键体检',cleanup:'🧹 垃圾清理',
+     network:'🌐 网络',processes:'⚙️ 进程管理',ai:'🤖 AI 控制台'}[name] || '';
+}
+
+// ═══════════════ 渲染 ═══════════════
+function renderAll() {
+  if (!scanCache) return;
+  renderDashboard();
+  renderHardware();
+  renderStorage();
+  renderSoftware();
+  renderUSB();
+  renderSecurity();
+  renderCheckup();
+  renderCleanup();
+  renderNetwork();
+  renderProcesses();
+  renderAI();
+}
+
+// ── 仪表盘 ──
+const safeArr = x => Array.isArray(x) ? x.filter(a=>a) : [];
+
+function renderDashboard() {
+  const s = scanCache;
+  const hw = s.hardware || {};
+  const st = s.storage || {};
+  const sy = s.system || {};
+  const se = s.security || {};
+
+  const cpuName = (hw.cpu?.name || '?').substring(0, 40);
+  const gpuNames = safeArr(hw.gpu).map(g=>g.name).join(', ') || '?';
+  const totalDisk = (st.drives||[]).reduce((a,d)=>a + parseFloat(d.total), 0).toFixed(1) + ' GB';
+
+  const cards = [
+    {icon:'🧠',label:'CPU',value:cpuName,sub:`${hw.cpu?.cores||'?'} 核 ${hw.cpu?.threads||'?'} 线程`},
+    {icon:'🎮',label:'GPU',value:gpuNames,sub: (hw.gpu||[])[0]?.vram || '?'},
+    {icon:'🧮',label:'内存',value:hw.memory?.total||'?',sub:`${hw.memory?.sticks||'?'} 条`},
+    {icon:'💿',label:'磁盘总量',value:totalDisk,sub:(st.drives||[]).length+' 个分区'},
+    {icon:'🕐',label:'运行时间',value:sy.uptime||'?',sub:`${sy.os||''} Build ${sy.build||''}`},
+    {icon:'🛡️',label:'Defender',value:se.antivirus?.enabled?'✅ 已启用':'⚠ 未启用',sub:se.antivirus?.enabled?'实时保护中':'请检查'},
+  ];
+
+  document.getElementById('dashCards').innerHTML = cards.map(c=>`
+    <div class="card">
+      <div class="card-icon">${c.icon}</div>
+      <div class="card-label">${c.label}</div>
+      <div class="card-value" style="font-size:${c.value.length>30?'14px':'20px'}">${c.value}</div>
+      <div class="card-sub">${c.sub}</div>
+    </div>
+  `).join('');
+
+  // 进程 TOP 5
+  const procs = (sy.processes||[]).slice(0,5);
+  document.querySelector('#topProcesses tbody').innerHTML = procs.map(p=>`
+    <tr><td>${p.name}</td><td class="mono">PID ${p.pid}</td><td>${p.ram}</td></tr>
+  `).join('') || '<tr><td colspan="3">无数据</td></tr>';
+}
+
+// ── 硬件 ──
+function renderHardware() {
+  const hw = scanCache.hardware || {};
+  const cards = [
+    {icon:'🧠',label:'CPU',value:(hw.cpu?.name||'?').substring(0,50),sub:`${hw.cpu?.cores||'?'} 核 ${hw.cpu?.threads||'?'} 线程 · ${hw.cpu?.maxSpeed||''}`},
+  ];
+  safeArr(hw.gpu).forEach(g=>{ cards.push({icon:'🎮',label:'GPU',value:(g.name||'?').substring(0,40),sub:`驱动 ${g.driver||'?'} · 显存 ${g.vram||'?'}`}) });
+  cards.push(
+    {icon:'🧮',label:'内存',value:hw.memory?.total||'?',sub:(hw.memory?.details||[]).map(d=>`${d.capacity} ${d.type}@${d.speed}`).join(' | ')},
+    {icon:'🔧',label:'主板',value:hw.motherboard?.product||'?',sub:hw.motherboard?.manufacturer||''},
+    {icon:'⚡',label:'BIOS',value:hw.bios?.version||'?',sub:`${hw.bios?.vendor||''} · ${hw.bios?.date||''}`},
+  );
+  document.getElementById('hwCards').innerHTML = cards.map(c=>`
+    <div class="card">
+      <div class="card-icon">${c.icon}</div>
+      <div class="card-label">${c.label}</div>
+      <div class="card-value" style="font-size:${c.value.length>30?'14px':'18px'}">${c.value}</div>
+      <div class="card-sub">${c.sub||''}</div>
+    </div>
+  `).join('');
+}
+
+// ── 存储 ──
+function renderStorage() {
+  const st = scanCache.storage || {};
+  document.getElementById('diskList').innerHTML = '';
+  document.querySelector('#bigFiles tbody').innerHTML = '';
+  document.getElementById('diskList').innerHTML = (st.drives||[]).map(d=>{
+    let cls = d.usedPercent > 90 ? 'danger' : d.usedPercent > 70 ? 'warn' : 'good';
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:14px">
+        <strong>${d.letter}</strong> <span>${d.used} / ${d.total} · 剩余 ${d.free}</span>
+      </div>
+      <div class="bar-wrap"><div class="bar-fill ${cls}" style="width:${d.usedPercent}%"></div></div>
+    </div>`;
+  }).join('');
+  safeArr(st.physical).forEach(p=>{
+    document.getElementById('diskList').innerHTML += `<div class="timestamp" style="margin-top:4px">💿 ${p.model} | ${p.media} | ${p.size} | 健康: ${p.health} | ${p.temp}</div>`;
+  });
+  if (st.tempSize) document.getElementById('diskList').innerHTML += `<div class="timestamp" style="margin-top:8px">🗑️ 临时文件: ${st.tempSize}</div>`;
+
+  (st.bigFiles||[]).slice(0,10).forEach((f,i)=>{
+    document.querySelector('#bigFiles tbody').innerHTML += `<tr><td>${i+1}</td><td class="mono" style="max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.path}</td><td>${f.size}</td></tr>`;
+  });
+}
+
+// ── 软件 ──
+function renderSoftware() {
+  const sw = scanCache.software || {};
+  document.getElementById('swCount').textContent = `共 ${sw.count||0} 个软件`;
+  document.querySelector('#swTable tbody').innerHTML = '';
+  document.querySelector('#startupTable tbody').innerHTML = '';
+  (sw.apps||[]).slice(0,30).forEach(a=>{
+    document.querySelector('#swTable tbody').innerHTML += `<tr><td>${a.name}</td><td class="mono">${a.version||'-'}</td><td>${a.publisher||'-'}</td></tr>`;
+  });
+  (sw.startup||[]).forEach(s=>{
+    document.querySelector('#startupTable tbody').innerHTML += `<tr><td>${s.name}</td><td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.command||''}</td><td>${s.location||''}</td></tr>`;
+  });
+}
+
+// ── USB ──
+function renderUSB() {
+  const usb = scanCache.usb || {};
+  document.getElementById('usbCurrent').innerHTML = '';
+  document.querySelector('#usbHistory tbody').innerHTML = '';
+  document.getElementById('monitorList').innerHTML = '';
+  document.getElementById('usbCurrent').innerHTML = safeArr(usb.current).length
+    ? safeArr(usb.current).map(u=>`<p>🔌 ${u.name||'(未知)'}</p>`).join('')
+    : '<p class="timestamp">当前无 USB 设备</p>';
+  safeArr(usb.history).forEach(h=>{
+    document.querySelector('#usbHistory tbody').innerHTML += `<tr><td>${h.name||'?'}</td><td class="mono" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.hardwareId||''}</td></tr>`;
+  });
+  document.getElementById('monitorList').innerHTML = safeArr(usb.monitors).map(m=>`<p>🖥️ ${m.name||'(未知)'}</p>`).join('') || '<p class="timestamp">无数据</p>';
+}
+
+// ── 安全 ──
+function renderSecurity() {
+  const se = scanCache.security || {};
+  const av = se.antivirus || {};
+  document.querySelector('#threatTable tbody').innerHTML = '';
+  const statusClass = av.enabled === true ? 'badge-ok' : 'badge-err';
+  document.getElementById('defStatus').innerHTML = `
+    <p>实时保护: <span class="badge ${statusClass}">${av.enabled?'✅ 启用':'❌ 禁用'}</span></p>
+    <p>行为监控: <span class="badge ${av.behaviorMonitor?'badge-ok':'badge-err'}">${av.behaviorMonitor?'✅ 启用':'❌ 禁用'}</span></p>
+    <p>病毒库更新: ${av.signatureUpdated||'?'}</p>
+  `;
+  (se.threats||[]).forEach(t=>{
+    document.querySelector('#threatTable tbody').innerHTML += `<tr><td>${t.name}</td><td>${t.severity}</td><td>${t.action}</td></tr>`;
+  });
+  if (!(se.threats||[]).length) document.querySelector('#threatTable tbody').innerHTML = '<tr><td colspan="3" style="color:var(--green)">✅ 无威胁记录</td></tr>';
+  document.getElementById('fwStatus').innerHTML = (se.firewall||[]).map(f=>`<p>${f.profile}: <span class="badge ${f.enabled?'badge-ok':'badge-err'}">${f.enabled?'启用':'禁用'}</span></p>`).join('');
+}
+
+// ── 网络 ──
+function renderNetwork() {
+  const net = scanCache.network || {};
+  document.getElementById('netInfo').innerHTML = `<p><strong>主机名:</strong> ${net.hostname||'?'}</p>` +
+    safeArr(net.adapters).map(a=>`<p>🌐 ${a.name||'?'} · ${a.speed||'?'} · ${a.mac||'?'}</p>`).join('');
+}
+
+// ── 进程 ──
+function renderProcesses() {
+  const procs = (scanCache.system||{}).processes||[];
+  document.querySelector('#procTable tbody').innerHTML = '';
+  procs.forEach(p=>{
+    document.querySelector('#procTable tbody').innerHTML +=
+      `<tr><td>${p.name}</td><td class="mono">${p.pid}</td><td>${p.ram}</td><td>${p.cpu}</td>
+       <td><button class="btn btn-danger btn-sm" onclick="killProcess(${p.pid},'${p.name}')" title="需确认">⏹ 结束</button></td></tr>`;
+  });
+}
+
+// ── AI 控制台 ──
+function renderAI() {
+  const commands = [
+    {name:'scan',desc:'全量系统扫描'},
+    {name:'hardware',desc:'查看硬件信息'},
+    {name:'storage',desc:'查看存储/大文件'},
+    {name:'software',desc:'已安装软件列表'},
+    {name:'startup',desc:'查看启动项'},
+    {name:'usb',desc:'USB设备历史'},
+    {name:'defender-status',desc:'Defender安全状态'},
+    {name:'defender-scan',desc:'触发快速扫描'},
+    {name:'processes',desc:'进程列表'},
+    {name:'network',desc:'网络信息'},
+    {name:'clean-temp',desc:'清理临时文件(预览)'},
+    {name:'report',desc:'生成完整报告'},
+  ];
+  document.getElementById('aiCommands').innerHTML = commands.map(c=>`
+    <button class="cmd-btn" onclick="copyCommand('${c.name}')">
+      <span class="cmd-name">/${c.name}</span>
+      <div class="cmd-desc">${c.desc}</div>
+    </button>
+  `).join('');
+}
+
+// ── 体检评分 ──
+async function refreshCheckup() {
+  const btn = event?.target?.closest('button');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ 体检中...'; }
+  try {
+    const r = await fetch('/api/health-score');
+    const d = await r.json();
+    renderCheckupData(d);
+    toast('体检完成！', 'success');
+  } catch(e) { toast('体检失败: '+e.message, 'error'); }
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 重新体检'; }
+}
+
+function renderCheckupData(d) {
+  if (!d || d.overall == null) return;
+  const ov = d.overall;
+  let emoji = ov >= 90 ? '🥳' : ov >= 75 ? '😊' : ov >= 60 ? '😐' : '🤒';
+  let clr = ov >= 90 ? 'var(--green)' : ov >= 75 ? 'var(--blue)' : ov >= 60 ? 'var(--orange)' : 'var(--red)';
+  let msg = ov >= 90 ? '状态极佳' : ov >= 75 ? '良好' : ov >= 60 ? '一般' : '需要优化';
+  document.getElementById('checkupEmoji').textContent = emoji;
+  document.getElementById('checkupScoreDisplay').style.color = clr;
+  document.getElementById('checkupScoreDisplay').textContent = ov + '分';
+  document.getElementById('checkupGrade').innerHTML = `<span class="badge ${ov>=75?'badge-ok':ov>=60?'badge-warn':'badge-err'}" style="font-size:16px;padding:4px 16px">${d.grade} · ${msg}</span>`;
+  document.getElementById('checkupTs').textContent = d.timestamp ? `体检时间: ${d.timestamp}` : '';
+
+  // ── 问题摘要 ──
+  const issues = d.issuesCount || 0;
+  let summaryHTML = '';
+  if (issues === 0) {
+    summaryHTML = '<span style="color:var(--green);font-weight:600">✅ 恭喜！未发现问题</span>';
+  } else {
+    const parts = [];
+    if (d.criticalCount > 0) parts.push(`<span style="color:var(--red);font-weight:700">🔴 ${d.criticalCount} 项严重</span>`);
+    if (d.warningCount > 0) parts.push(`<span style="color:var(--orange);font-weight:600">🟠 ${d.warningCount} 项建议优化</span>`);
+    summaryHTML = `发现 ${issues} 个问题 · ${parts.join(' · ')}`;
+  }
+  document.getElementById('checkupSummary').innerHTML = summaryHTML;
+
+  // ── 一键修复按钮 ──
+  const fixBtn = document.getElementById('oneClickFixBtn');
+  if ((d.fixableCount || 0) > 0 && issues > 0) {
+    fixBtn.style.display = 'inline-flex';
+    fixBtn.textContent = `✨ 一键修复（${d.fixableCount} 项）`;
+  } else {
+    fixBtn.style.display = 'none';
+  }
+
+  document.getElementById('checkupItems').innerHTML = (d.items||[]).map(it => {
+    let barCls = it.score >= 80 ? 'good' : it.score >= 50 ? 'warn' : 'danger';
+    let lvlBadge = it.level === 'critical' ? '<span class="badge badge-err">严重</span>'
+      : it.level === 'warning' ? '<span class="badge badge-warn">建议</span>'
+      : '<span class="badge badge-ok">良好</span>';
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+        <strong style="width:80px;white-space:nowrap">${lvlBadge} ${it.name}</strong>
+        <span style="flex:1;font-size:12px;color:var(--text-dim)">${it.detail||''}</span>
+        <span style="font-weight:700;white-space:nowrap;color:${barCls==='good'?'var(--green)':barCls==='warn'?'var(--orange)':'var(--red)'}">${it.score}分</span>
+      </div>
+      <div class="bar-wrap"><div class="bar-fill ${barCls}" style="width:${it.score}%"></div></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('checkupSuggestions').innerHTML = (d.suggestions||[]).map(s =>
+    `<p style="padding:6px 0;color:var(--text)">💡 ${s}</p>`
+  ).join('');
+
+  // 清空修复报告
+  document.getElementById('checkupFixReport').style.display = 'none';
+  document.getElementById('checkupFixProgress').style.display = 'none';
+}
+
+function renderCheckup() {
+  refreshCheckup();
+}
+
+// ── 一键修复 ──
+async function executeOneClickFix() {
+  const btn = document.getElementById('oneClickFixBtn');
+  const progress = document.getElementById('checkupFixProgress');
+  const report = document.getElementById('checkupFixReport');
+  if (!confirm('确认一键修复吗？将自动清理：\n• 临时文件\n• 回收站\n• 浏览器缓存\n• Windows 更新缓存\n\n⚠ 此操作不可撤销')) return;
+
+  btn.disabled = true; btn.textContent = '⏳ 修复中...';
+  progress.style.display = 'block';
+  progress.innerHTML = `<div style="padding:12px;background:var(--bg);border-radius:var(--radius)">
+    <p>🔧 正在清理临时文件...</p>
+    <p>🗑️ 正在清空回收站...</p>
+    <p>🌐 正在清理浏览器缓存...</p>
+    <p>📦 正在清理更新缓存...</p>
+  </div>`;
+
+  try {
+    const r = await fetch('/api/one-click-fix', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({confirm: true})
+    });
+    const d = await r.json();
+    progress.style.display = 'none';
+    report.style.display = 'block';
+    report.innerHTML = `<h3>✅ 修复完成</h3>
+      <p style="font-size:20px;font-weight:700;color:var(--green);margin:8px 0">共释放 ${d.totalFreedText}</p>
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:12px">${Object.entries(d.results||{}).map(([k,v])=>{
+        const names={temp:'临时文件',recycle:'回收站',browser:'浏览器缓存',wupdate:'更新缓存'};
+        return `<p>• ${names[k]||k}: ${v.error?v.error:v.freedText}</p>`;
+      }).join('')}</div>
+      <button class="btn btn-primary btn-sm" onclick="refreshCheckup()">🔄 重新体检看效果</button>`;
+    toast(`修复完成！释放 ${d.totalFreedText}`, 'success');
+  } catch(e) {
+    progress.style.display = 'none';
+    toast('修复失败: '+e.message, 'error');
+  }
+  btn.disabled = false; btn.textContent = '✨ 一键修复';
+}
+
+// ── 垃圾清理 ──
+let cleanupData = null;
+
+async function renderCleanup() {
+  document.getElementById('cleanupLoading').style.display = 'block';
+  document.getElementById('cleanupContent').style.display = 'none';
+  document.getElementById('cleanupResult').style.display = 'none';
+  try {
+    const r = await fetch('/api/cleanup/preview');
+    cleanupData = await r.json();
+    document.getElementById('cleanupLoading').style.display = 'none';
+    document.getElementById('cleanupContent').style.display = 'block';
+    document.getElementById('cleanupTotalText').textContent = cleanupData.totalText || '0 B';
+    const cats = cleanupData.categories || [];
+    const catNames = {
+      temp:'临时文件', recycle:'回收站', browser:'浏览器缓存', wupdate:'Windows更新缓存',
+      thumbnail:'缩略图缓存', logs:'系统日志', delivery:'传递优化文件', wer:'错误报告', winold:'Windows.old'
+    };
+    document.getElementById('cleanupCategories').innerHTML = cats.map(c => `
+      <div style="display:flex;align-items:center;padding:10px 12px;border-bottom:1px solid var(--border);cursor:pointer" onclick="toggleCat(this,'${c.id}')">
+        <input type="checkbox" data-cat="${c.id}" checked style="margin-right:12px;width:16px;height:16px;cursor:pointer;accent-color:var(--accent)" onclick="event.stopPropagation()">
+        <div style="flex:1">
+          <div style="font-size:14px">${catNames[c.id]||c.name}</div>
+          <div class="timestamp">${c.description||''}</div>
+        </div>
+        <div style="font-weight:600;color:var(--accent)">${_f(c.size)}</div>
+      </div>
+    `).join('') || '<p class="timestamp">🎉 没有可清理的垃圾文件！</p>';
+  } catch(e) {
+    document.getElementById('cleanupLoading').textContent = '扫描失败: ' + e.message;
+  }
+}
+
+function selectAllCleanup(sel) {
+  document.querySelectorAll('#cleanupCategories input[type=checkbox]').forEach(cb => cb.checked = sel);
+}
+
+function toggleCat(el, id) {
+  const cb = el.querySelector('input');
+  cb.checked = !cb.checked;
+}
+
+async function executeCleanup() {
+  const checked = [...document.querySelectorAll('#cleanupCategories input[type=checkbox]:checked')].map(cb => cb.dataset.cat);
+  if (!checked.length) { toast('请至少选择一项', 'error'); return; }
+  const sizeText = [...document.querySelectorAll('#cleanupCategories input[type=checkbox]:checked')]
+    .map(cb => cb.closest('div').querySelector('div:last-child').textContent);
+  if (!confirm(`确认清理 ${checked.length} 项垃圾文件吗？\n总计约: ${document.getElementById('cleanupTotalText').textContent}\n\n⚠ 此操作不可撤销`)) return;
+  const btn = document.getElementById('cleanupExecuteBtn');
+  btn.disabled = true; btn.textContent = '⏳ 清理中...';
+  try {
+    const r = await fetch('/api/cleanup/execute', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({categories: checked, confirm: true})
+    });
+    const d = await r.json();
+    const resDiv = document.getElementById('cleanupResult');
+    resDiv.style.display = 'block';
+    resDiv.innerHTML = `<h3>✅ 清理完成</h3>
+      <p style="font-size:18px;font-weight:700;color:var(--green)">共释放 ${d.totalFreedText}</p>
+      <div style="margin-top:8px">${Object.entries(d.results||{}).map(([k,v])=>`<p>• ${k}: ${v.freedText||v.error||'?'}</p>`).join('')}</div>`;
+    toast(`清理完成！释放 ${d.totalFreedText}`, 'success');
+    setTimeout(refreshCheckup, 2000);
+  } catch(e) { toast('清理失败: '+e.message, 'error'); }
+  btn.disabled = false; btn.textContent = '🧹 清理选中项';
+}
+
+function _f(bytes) {
+  if (!bytes || bytes === 0) return '0 B';
+  const u = ['B','KB','MB','GB','TB'];
+  let i = 0, v = bytes;
+  while (v >= 1024 && i < u.length-1) { v /= 1024; i++; }
+  return v.toFixed(1) + ' ' + u[i];
+}
+
+// ═══════════════ 操作 ═══════════════
+function copyCommand(cmd) {
+  navigator.clipboard.writeText(`/pc-manager ${cmd}`).then(()=>{
+    toast(`已复制: /pc-manager ${cmd} → 告诉 AI 即可执行`, 'success');
+  }).catch(()=>{
+    toast(`命令: /pc-manager ${cmd}`, 'success');
+  });
+}
+
+async function killProcess(pid, name) {
+  if (!confirm(`确认结束进程 ${name} (PID ${pid}) 吗？\n⚠ 可能导致程序未保存数据丢失。`)) return;
+  try {
+    const r = await fetch('/api/action/kill-process', {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pid, confirm:true})
+    });
+    const d = await r.json();
+    if (d.status==='killed') { toast(`已结束 ${name} (PID ${pid})`, 'success'); setTimeout(refreshData, 1500) }
+    else toast(d.error||'失败', 'error');
+  } catch(e) { toast('操作失败: '+e.message, 'error') }
+}
+
+async function triggerDefenderScan(type) {
+  if (!confirm(`确认触发 Windows Defender ${type==='FullScan'?'全盘':'快速'}扫描？`)) return;
+  toast('正在启动 Defender 扫描...', 'success');
+  try {
+    const r = await fetch('/api/action/defender-scan', {
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({type, confirm:true})
+    });
+    const d = await r.json();
+    toast(d.status==='started'?`${type} 扫描已启动`:`扫描失败`,'success');
+  } catch(e) { toast('操作失败','error') }
+}
+
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ═══════════════ AI 聊天 ═══════════════
+let chatHistory = [];
+
+// ── 加载/保存配置 ──
+async function loadChatConfig() {
+  try {
+    const r = await fetch('/api/chat/config');
+    const d = await r.json();
+    document.getElementById('cfgEndpoint').value = d.config.endpoint || '';
+    document.getElementById('cfgKey').value = d.config.api_key || '';
+    document.getElementById('cfgModel').value = d.config.model || '';
+    const label = d.backend === 'openclaw' ? '✅ OpenClaw' : d.backend === 'none' ? '⚠ 未配置' : '✅ 自定义';
+    const color = d.backend === 'openclaw' ? 'var(--green)' : d.backend === 'none' ? 'var(--red)' : 'var(--blue)';
+    document.getElementById('chatBackendStatus').textContent = label;
+    document.getElementById('chatBackendStatus').style.color = color;
+  } catch(e) {}
+}
+
+async function saveChatConfig() {
+  const body = {
+    endpoint: document.getElementById('cfgEndpoint').value.trim(),
+    api_key: document.getElementById('cfgKey').value.trim(),
+    model: document.getElementById('cfgModel').value.trim()
+  };
+  if (!body.endpoint || !body.api_key) return toast('请填写 Endpoint 和 API Key','error');
+  await fetch('/api/chat/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  document.getElementById('chatSettingsBox').style.display = 'none';
+  await loadChatConfig();
+  toast('配置已保存','success');
+}
+
+function toggleChatSettings() {
+  const box = document.getElementById('chatSettingsBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+  
+  addChatMsg('user', msg);
+  input.value = '';
+  chatHistory.push({role:'user', content:msg});
+  
+  const msgsDiv = document.getElementById('chatMessages');
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg bot';
+  typing.innerHTML = '<div class="chat-avatar">🤖</div><div class="chat-bubble"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  msgsDiv.appendChild(typing);
+  msgsDiv.scrollTop = msgsDiv.scrollHeight;
+  
+  try {
+    const r = await fetch('/api/chat',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({messages:[{role:'user',content:msg}],user:'pc-manager-session'})
+    });
+    const d = await r.json();
+    typing.remove();
+    if(d.error){addChatMsg('bot','⚠ '+d.error); chatHistory.push({role:'assistant',content:'⚠ '+d.error})}
+    else{addChatMsg('bot',d.reply); chatHistory.push({role:'assistant',content:d.reply})}
+  }catch(e){typing.remove(); addChatMsg('bot','⚠ 连接失败: '+e.message)}
+}
+
+function addChatMsg(role, text) {
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg '+role;
+  div.innerHTML = `<div class="chat-avatar">${role==='user'?'👤':'🤖'}</div><div class="chat-bubble">${text.replace(/</g,'&lt;').replace(/\n/g,'<br>').replace(/```(\w*)\n?([\s\S]*?)```/g,'<pre><code>$2</code></pre>').replace(/`([^`]+)`/g,'<code>$1</code>')}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+// ═══════════════ 启动 ═══════════════
+loadData();
+loadChatConfig();
+setInterval(() => loadData(), 30000); // 每30秒自动刷新
+</script>
+</body>
+</html>

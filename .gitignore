@@ -1,0 +1,153 @@
+# ═══════════════════════════════════════════════════════════
+# ThresholdEcho — Liminal Guardian
+# ═══════════════════════════════════════════════════════════
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+*.spec
+
+# Node
+node_modules/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Secrets & Env (FORCE — 绝对不能推)
+.env
+*.pem
+*.key
+*_secret*
+
+# OpenClaw internals
+.user_active_today
+.clawhub/
+HEARTBEAT.md
+_channels.json
+.pengyouquan_*.json
+openclaw-workspace-state.json
+
+# === 🔒 永远不要推 ===
+memory/
+data/
+sessions/
+stories/
+_incoming_skills/
+inbound/
+tor_data/
+tor_data2/
+torrc
+
+# Temp / Generated
+*.tmp
+*.bak
+canvas/
+session_log_*
+tmp_*
+temp_*
+model_test_results.txt
+
+# Binaries (模型文件太大)
+*.exe
+*.msi
+*.safetensors
+*.bin
+*.pth
+
+# Media (个人文件)
+*.mp3
+*.wav
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.svg
+*.xlsx
+
+# Docs (个人资料)
+*.docx
+*.pptx
+*.pdf
+
+# 个人内容
+lessons/
+extra_study/
+reports/
+历史作业/
+galgame_list.md
+coronation_edict.png
+xiaoyouzi_selfie*
+DREAMS.md
+python-resurrection.lobster
+process_snapshot_*
+
+# BLIP / 模型
+scripts/blip_model/
+scripts/blip_processor/
+
+# Lobster 状态
+.lobster/
+
+# Scripts (个人用，不需要开源)
+scripts/ensure_tor.ps1
+scripts/read_photo.py
+scripts/flac_to_mp3.py
+scripts/kgm_to_mp3.py
+scripts/gen_selfie.py
+scripts/patch_image_prompt.py
+scripts/scrape_galgames.py
+scripts/scrape_all_galgames.py
+scripts/store_memes_lancedb.py
+scripts/import_memory_to_lancedb.py
+scripts/bilibili_archive.py
+scripts/bili-search.py
+scripts/bili_wbi.py
+scripts/kkrb_daily_report.py
+scripts/hsr_lihui_watcher.py
+scripts/analyze_hsr.py
+scripts/fix_windows_update.ps1
+scripts/check_draw_details.ps1
+scripts/pycharm_bridge.ps1
+scripts/vmware_manager.ps1
+scripts/xunlei_download.ps1
+scripts/test_all_models.ps1
+scripts/test_bili_api.py
+scripts/set_tts_kokoro.py
+scripts/setup_talk.py
+scripts/find_up.py
+scripts/fix_gateway.py
+scripts/lobster-clean.ps1
+scripts/lobster-japanese-lesson.js
+scripts/lobster-lesson.js
+scripts/japanese-daily-lesson.lobster
+scripts/hin_profile.md
+
+# Skills (已安装的第三方，不归我们维护)
+skills/github-api-tool/
+skills/github-cli-tool/
+skills/bilibili/
+skills/bilibili-universal/
+skills/alibaba-vision/
+skills/deepseek-balance/
+skills/lobster/
+skills/python-tutor/
+skills/self-improving-agent/
+skills/smyx_analysis/
+skills/smyx_common/
+skills/tor-network/
+skills/vision-ai/
+skills/visual-qa-analysis/
+skills/vmware-workstation-manager/
+skills/volcengine-image-patch/
+skills/xunlei-download/
