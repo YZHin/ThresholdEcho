@@ -2,9 +2,12 @@
 
 > 轻量级 Windows AI 电脑管家
 
+> 🎒 *Built by a high school student with 💜 — 一个高中生的 AI 管家梦*
+
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](https://github.com/YZHin/ThresholdEcho)
 [![Python](https://img.shields.io/badge/python-3.8%2B-green)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v2.0-a371f7)](https://github.com/YZHin/ThresholdEcho/releases)
 
 ---
 
