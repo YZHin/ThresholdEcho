@@ -1,6 +1,6 @@
 # ThresholdEcho
 
-> 阈限回响 · 二次元×后室的 AI 电脑守护者
+> 轻量级 Windows AI 电脑管家
 
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](https://github.com)
 [![Python](https://img.shields.io/badge/python-3.8%2B-green)](https://www.python.org/)

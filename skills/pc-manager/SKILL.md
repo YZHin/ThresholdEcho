@@ -1,10 +1,10 @@
 ---
 name: pc-manager
-description: ThresholdEcho — 阈限回响。二次元×后室的 AI 电脑守护者，扫描/体检/清理/进程管理/一键修复。
+description: ThresholdEcho — 轻量级 Windows AI 电脑管家，扫描/体检/清理/进程管理/一键修复。
 metadata: { "openclaw": { "emoji": "🌫️" } }
 ---
 
-# ThresholdEcho — 阈限回响
+# ThresholdEcho
 
 ## 安装
 
