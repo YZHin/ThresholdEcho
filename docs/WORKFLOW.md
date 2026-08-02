@@ -1,8 +1,6 @@
 # 🗺️ OpenClaw PC Manager — 长期工作流总控
 
-> 最后更新：2026-08-01 · 当前阶段：Phase 4 待启动
-> 
-> ⚠️ **阻塞项**：等待 Hin 宝给出最终 GitHub 仓库命名方案
+> 最后更新：2026-08-01 · 当前阶段：Phase 4 待启动 · 仓库已上线 ✅
 
 ---
 
@@ -29,7 +27,7 @@ Phase 4 (2026-08 第1-2周)    Phase 5 (第3-4周)          Phase 6 (第5周起)
 | 4 | 开机自检报告 | Phase 4 | ⬜ 未开始 | 🤖 |
 | 5 | 点击软件 → Agent 解释 | Phase 4 | ⬜ 未开始 | 🤖 |
 | 6 | 游戏模式联动 | Phase 4 | ⬜ 未开始 | 🤖 |
-| 7 | GitHub 仓库创建 + 初始 push | 基础建设 | ⏸️ 阻塞（等命名） | 👤 Hin |
+| 7 | GitHub 仓库创建 + 初始 push | 基础建设 | ✅ 已完成（main @ 34ecc17，v2.0 tag） | 👤 Hin |
 | 8 | GitHub Actions CI（PyInstaller 自动打包） | 基础建设 | ⬜ 未开始 | 🤖 |
 | 9 | ClawHub 发布技能包 | 基础建设 | ⬜ 未开始 | 🤖 |
 | 10 | 智能垃圾溯源 | Phase 5 | ⬜ 未开始 | 🤖 |
@@ -53,13 +51,13 @@ Phase 4 (2026-08 第1-2周)    Phase 5 (第3-4周)          Phase 6 (第5周起)
 - [x] 本地 git init + 初始 commit（54 files, 6913 lines）
 - [x] `.gitignore` 配置（排除 secrets/memory/binaries）
 - [x] GitHub Skills 安装（github-api-tool + github-cli-tool）
-- [x] GITHUB_TOKEN 已配置（环境变量 `github_pat_...`）
 - [x] GitHub Desktop 已安装
-- [ ] **⏸️ 等 Hin 宝给仓库名** → 创建 GitHub repo + push
-- [ ] 创建 `README.md`（展示用）
-- [ ] 设置 GitHub Actions CI（自动 PyInstaller 打包 `.exe`）
-- [ ] 打 Release tag + 发布 v2.0 版本
+- [x] 创建 GitHub repo + push（`YZHin/ThresholdEcho`，main @ 34ecc17，2026-08-02 核实）
+- [x] 创建 `README.md`（含高中学历 developer badge，tagline 已调低）
+- [ ] 设置 GitHub Actions CI（自动 PyInstaller 打包 `.exe`）— `.github/workflows` 尚不存在
+- [x] 打 Release tag v2.0（Release 已发布，1 个附件）
 - [ ] 发布到 ClawHub 中文镜像站
+- [x] GITHUB_TOKEN 验证（User 级 env len=93，API 通；⚠️ gateway 进程需从 User 级读取或重启加载）
 
 ## 🔑 技术路线（Phase 4 核心）
 

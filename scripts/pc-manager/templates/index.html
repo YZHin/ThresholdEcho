@@ -154,6 +154,28 @@ a { color:var(--accent);text-decoration:none }
 .typing-dots span:nth-child(2){animation-delay:.2s}
 .typing-dots span:nth-child(3){animation-delay:.4s}
 @keyframes typing { 0%,60%,100%{opacity:.3} 30%{opacity:1} }
+
+/* ── Agent 点击即问气泡 ── */
+.agent-bubble-overlay { position:fixed; top:0; left:0; width:100%; height:100%; z-index:1000; pointer-events:none }
+.agent-bubble {
+  position:absolute; max-width:380px; background:var(--bg-card); border:1px solid var(--accent-dim);
+  border-radius:12px; box-shadow:0 8px 32px rgba(124,58,237,.25); z-index:1001; pointer-events:auto;
+  animation: bubbleIn .25s ease; overflow:hidden
+}
+@keyframes bubbleIn { from{opacity:0;transform:translateY(8px) scale(.95)} to{opacity:1;transform:translateY(0) scale(1)} }
+.agent-bubble-header { display:flex; align-items:center; justify-content:space-between;
+  padding:10px 14px; background:rgba(124,58,237,.12); border-bottom:1px solid var(--border) }
+.agent-bubble-header .agent-label { font-size:12px; font-weight:600; color:var(--accent); display:flex; align-items:center; gap:6px }
+.agent-bubble-header .agent-close { background:none; border:none; color:var(--text-dim); cursor:pointer;
+  font-size:16px; padding:2px 6px; line-height:1; border-radius:4px; transition:var(--transition) }
+.agent-bubble-header .agent-close:hover { color:var(--text); background:var(--bg-hover) }
+.agent-bubble-body { padding:12px 14px; font-size:13px; line-height:1.6; max-height:320px; overflow-y:auto;
+  color:var(--text); word-break:break-word }
+.agent-bubble-body p { margin:6px 0 }
+.agent-bubble-body strong { color:var(--accent-dim) }
+.agent-bubble-loading { display:flex; align-items:center; gap:8px; padding:4px 0 }
+.clickable-row { cursor:pointer; transition:var(--transition) }
+.clickable-row:hover { color:var(--accent) !important; text-decoration:underline }
 </style>
 </head>
 <body>
@@ -428,7 +450,7 @@ function renderSoftware() {
   document.querySelector('#swTable tbody').innerHTML = '';
   document.querySelector('#startupTable tbody').innerHTML = '';
   (sw.apps||[]).slice(0,30).forEach(a=>{
-    document.querySelector('#swTable tbody').innerHTML += `<tr><td>${a.name}</td><td class="mono">${a.version||'-'}</td><td>${a.publisher||'-'}</td></tr>`;
+    document.querySelector('#swTable tbody').innerHTML += `<tr><td class="clickable-row" onclick="explainSoftware('${(a.name||'').replace(/'/g,"\\'")}','${(a.version||'').replace(/'/g,"\\'")}','${(a.publisher||'').replace(/'/g,"\\'")}',event)" title="点击了解这个软件">${a.name}</td><td class="mono">${a.version||'-'}</td><td>${a.publisher||'-'}</td></tr>`;
   });
   (sw.startup||[]).forEach(s=>{
     document.querySelector('#startupTable tbody').innerHTML += `<tr><td>${s.name}</td><td class="mono" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.command||''}</td><td>${s.location||''}</td></tr>`;
@@ -481,8 +503,8 @@ function renderProcesses() {
   document.querySelector('#procTable tbody').innerHTML = '';
   procs.forEach(p=>{
     document.querySelector('#procTable tbody').innerHTML +=
-      `<tr><td>${p.name}</td><td class="mono">${p.pid}</td><td>${p.ram}</td><td>${p.cpu}</td>
-       <td><button class="btn btn-danger btn-sm" onclick="killProcess(${p.pid},'${p.name}')" title="需确认">⏹ 结束</button></td></tr>`;
+      `<tr><td class="clickable-row" onclick="explainProcess(${p.pid},'${p.name.replace(/'/g,"\\'")}','${p.ram}','${p.cpu}',event)" title="点击了解这个进程">${p.name}</td><td class="mono">${p.pid}</td><td>${p.ram}</td><td>${p.cpu}</td>
+       <td><button class="btn btn-danger btn-sm" onclick="event.stopPropagation();killProcess(${p.pid},'${p.name.replace(/'/g,"\\'")}')" title="需确认">⏹ 结束</button></td></tr>`;
   });
 }
 
@@ -740,6 +762,94 @@ function toast(msg, type='success') {
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
 }
+
+// ═══════════════ Agent 点击即问（Phase 4）═══════════════
+let _agentBubble = null;
+
+function closeAgentBubble() {
+  if (_agentBubble) { _agentBubble.remove(); _agentBubble = null; }
+}
+
+function showAgentBubble(anchorEl, loading) {
+  closeAgentBubble();
+  const rect = anchorEl.getBoundingClientRect();
+  const overlay = document.createElement('div');
+  overlay.className = 'agent-bubble-overlay';
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeAgentBubble(); });
+
+  const bubble = document.createElement('div');
+  bubble.className = 'agent-bubble';
+  // 定位：优先放右边，空间不够放下面
+  const rightSpace = window.innerWidth - rect.right - 20;
+  const x = rightSpace > 400 ? rect.right + 12 : Math.max(16, rect.left);
+  const y = rightSpace > 400 ? rect.top - 8 : rect.bottom + 8;
+  bubble.style.left = x + 'px';
+  bubble.style.top = y + 'px';
+
+  bubble.innerHTML = `
+    <div class="agent-bubble-header">
+      <span class="agent-label">🌫️ Echo</span>
+      <button class="agent-close" onclick="closeAgentBubble()">✕</button>
+    </div>
+    <div class="agent-bubble-body">${loading
+      ? '<div class="agent-bubble-loading"><div class="typing-dots"><span></span><span></span><span></span></div>正在分析...</div>'
+      : loading === false ? '' : ''}</div>
+  `;
+  overlay.appendChild(bubble);
+  document.body.appendChild(overlay);
+  _agentBubble = overlay;
+  return bubble.querySelector('.agent-bubble-body');
+}
+
+function fillBubbleBody(text) {
+  try {
+    if (!_agentBubble || !_agentBubble.querySelector) return;
+    const body = _agentBubble.querySelector('.agent-bubble-body');
+    if (!body) return;
+    body.innerHTML = String(text || '（无回复）')
+      .replace(/</g,'&lt;')
+      .replace(/\n/g,'<br>')
+      .replace(/```(\w*)\n?([\s\S]*?)```/g,'<pre><code>$2</code></pre>')
+      .replace(/`([^`]+)`/g,'<code>$1</code>')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
+  } catch(e) { console.error('fillBubbleBody:', e); }
+}
+
+async function explainProcess(pid, name, ram, cpu, event) {
+  try { event.stopPropagation(); } catch(e) {}
+  const anchor = (event && event.target) ? (event.target.closest('td') || event.target) : null;
+  if (!anchor) return;
+  showAgentBubble(anchor, true);
+  try {
+    const r = await fetch('/api/agent/explain-process', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pid,name,ram,cpu})
+    });
+    const d = await r.json();
+    fillBubbleBody(d.reply || d.error || '（无响应）');
+  } catch(e) {
+    fillBubbleBody('⚠️ 连接失败: ' + e.message);
+  }
+}
+
+async function explainSoftware(name, version, publisher, event) {
+  try { event.stopPropagation(); } catch(e) {}
+  const anchor = (event && event.target) ? (event.target.closest('td') || event.target) : null;
+  if (!anchor) return;
+  showAgentBubble(anchor, true);
+  try {
+    const r = await fetch('/api/agent/explain-software', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name,version,publisher})
+    });
+    const d = await r.json();
+    fillBubbleBody(d.reply || d.error || '（无响应）');
+  } catch(e) {
+    fillBubbleBody('⚠️ 连接失败: ' + e.message);
+  }
+}
+
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAgentBubble(); });
 
 // ═══════════════ AI 聊天 ═══════════════
 let chatHistory = [];

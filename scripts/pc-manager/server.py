@@ -45,6 +45,22 @@ def _load_gateway_config():
 
 GATEWAY = _load_gateway_config()
 
+
+def _get_user_env(name: str) -> str:
+    """读取 Windows User 级环境变量（注册表），兼容刚设置未重启的进程"""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, "Environment") as k:
+            value, _ = winreg.QueryValueEx(k, name)
+            return str(value)
+    except Exception:
+        return os.environ.get(name, "")
+
+
+def _ds_api_key() -> str:
+    """获取 DeepSeek API Key：优先进程环境变量，其次 User 级注册表"""
+    return os.environ.get("DEEPSEEK_API_KEY", "") or _get_user_env("DEEPSEEK_API_KEY")
+
 # ── 缓存 ──────────────────────────────────────────────────
 _cache = {"data": None, "ts": 0.0}
 
@@ -603,22 +619,92 @@ CHAT_CONFIG = {
 CHAT_BACKEND = "openclaw" if CHAT_CONFIG["api_key"] else "none"
 
 
-def _chat_via_cli(messages):
-    """通过 openclaw agent CLI 聊天"""
-    user_msg = messages[-1].get("content", "") if messages else ""
+def call_agent(prompt, use_api=True):
+    """调用 AI 推理，返回文本；失败返回 None
+
+    优先级：
+    1. DeepSeek API 直连（~1-2s，需要 DEEPSEEK_API_KEY 环境变量）
+    2. Gateway HTTP API（~10s）
+    3. CLI 回退（~25s）
+    """
+    ds_key = _ds_api_key()
+
+    # 方案 A：DeepSeek API 直连（最快 ~1-2s）
+    if ds_key:
+        try:
+            payload = json.dumps({
+                "model": "deepseek-chat",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 500,
+                "stream": False
+            }).encode("utf-8")
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {ds_key}"
+            }
+            req = urllib.request.Request("https://api.deepseek.com/v1/chat/completions",
+                                          data=payload, headers=headers, method="POST")
+            resp = urllib.request.urlopen(req, timeout=30)
+            data = json.loads(resp.read())
+            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if reply:
+                return reply
+        except Exception:
+            pass
+
+    # 方案 B：Gateway HTTP API
+    if use_api and GATEWAY.get("token"):
+        try:
+            payload = json.dumps({
+                "model": "openclaw",
+                "messages": [{"role": "user", "content": prompt}],
+                "max_tokens": 500,
+                "stream": False
+            }).encode("utf-8")
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {GATEWAY['token']}"
+            }
+            endpoint = f"http://127.0.0.1:{GATEWAY['port']}/v1/chat/completions"
+            req = urllib.request.Request(endpoint, data=payload, headers=headers, method="POST")
+            resp = urllib.request.urlopen(req, timeout=45)
+            data = json.loads(resp.read())
+            reply = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            if reply and "couldn't generate" not in reply.lower():
+                return reply
+        except Exception:
+            pass
+
+    # 方案 C：CLI 回退
+    import tempfile
+    msg = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8")
+    msg.write(prompt); msg.close()
+    out = tempfile.NamedTemporaryFile(delete=False, suffix=".json")
+    out_path = out.name; out.close()
     try:
-        oc = os.path.expandvars(r"%APPDATA%\npm\openclaw.cmd")
-        r = subprocess.run(
-            [oc, "agent", "--session-key", "agent:main:pc-manager",
-             "--message", user_msg, "--json", "--timeout", "120"],
-            capture_output=True, text=True, timeout=150, creationflags=CREATE_NO_WINDOW
-        )
-        if r.returncode == 0 and r.stdout.strip():
-            o = json.loads(r.stdout)
-            return jsonify({"reply": o.get("result", {}).get("payloads", [{}])[0].get("text", "") or o.get("reply", "")})
+        oc = os.path.expandvars(r"%APPDATA%\\npm\\openclaw.cmd")
+        cmd = f'"{oc}" agent --session-key agent:main:pc-manager --message-file "{msg.name}" --json --timeout 60 > "{out_path}" 2>&1'
+        r = subprocess.run(cmd, shell=True, timeout=90, creationflags=CREATE_NO_WINDOW)
+        if r.returncode == 0:
+            with open(out_path, "r", encoding="utf-8") as f:
+                o = json.load(f)
+            return o.get("result", {}).get("payloads", [{}])[0].get("text", "") or o.get("reply", "")
     except Exception:
         pass
-    return None  # 返回 None 表示失败，由调用方处理
+    finally:
+        for p in [out_path, msg.name]:
+            try: os.unlink(p)
+            except OSError: pass
+    return None
+
+
+def _chat_via_cli(messages):
+    """通过 openclaw agent CLI 聊天（Flask response 包装）"""
+    user_msg = messages[-1].get("content", "") if messages else ""
+    text = call_agent(user_msg)
+    if text:
+        return jsonify({"reply": text})
+    return None
 
 
 @app.route("/api/chat/config", methods=["GET", "POST"])
@@ -674,6 +760,57 @@ def api_chat():
             return jsonify({"error": str(e)}), 500
 
     return jsonify({"error": "未配置 AI 后端。请在设置面板填入 API endpoint + key。\n支持: OpenAI / DeepSeek / OpenClaw Gateway / 任何 OpenAI 兼容 API"}), 500
+
+
+# ════════════════════════════════════════════════════════════
+#  API — Agent 点击即问（Phase 4）
+# ════════════════════════════════════════════════════════════
+
+@app.route("/api/agent/explain-process", methods=["POST"])
+def agent_explain_process():
+    """点击进程名 → Agent 解释"""
+    if not request.is_json:
+        return jsonify({"error": "请求体需为 JSON"}), 400
+    data = request.json
+    name = data.get("name", "未知进程")
+    pid = data.get("pid", "?")
+    ram = data.get("ram", "")
+    cpu = data.get("cpu", "")
+
+    prompt = f"""请用中文简要介绍以下进程（100字左右）：
+进程名: {name}
+PID: {pid}
+内存: {ram or '未知'}
+CPU: {cpu or '未知'}%
+说明它是什么、是否安全、资源占用原因、能否结束。"""
+
+    reply = call_agent(prompt)
+    if reply:
+        return jsonify({"reply": reply})
+    return jsonify({"error": "Agent 调用超时，请重试"}), 504
+
+
+@app.route("/api/agent/explain-software", methods=["POST"])
+def agent_explain_software():
+    """点击软件名 → Agent 解释"""
+    if not request.is_json:
+        return jsonify({"error": "请求体需为 JSON"}), 400
+    data = request.json
+    name = data.get("name", "未知软件")
+    version = data.get("version", "")
+    publisher = data.get("publisher", "")
+
+    prompt = f"""请用中文简要介绍以下软件（100字左右）：
+软件名: {name}
+{'版本: ' + version if version else ''}
+{'发行商: ' + publisher if publisher else ''}
+说明它是什么、是否安全、能否卸载、有无替代。"""
+
+    reply = call_agent(prompt)
+    if reply:
+        return jsonify({"reply": reply})
+    return jsonify({"error": "Agent 调用超时，请重试"}), 504
+
 
 #  辅助
 # ════════════════════════════════════════════════════════════
