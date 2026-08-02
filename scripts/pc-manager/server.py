@@ -611,6 +611,20 @@ def action_kill_process():
 #  API — AI 聊天（通用 OpenAI 兼容接口）
 # ════════════════════════════════════════════════════════════
 
+# ── 界面语言（zh/en，由前端 /api/lang 更新）────────────
+_UI_LANG = "zh"
+
+LANG_PROMPT = {
+    "zh": "请用中文回答。",
+    "en": "Please answer in English.",
+}
+
+
+def _lang_tag() -> str:
+    """返回当前界面语言对应的 prompt 后缀"""
+    return LANG_PROMPT.get(_UI_LANG, LANG_PROMPT["zh"])
+
+
 CHAT_CONFIG = {
     "endpoint": f"http://127.0.0.1:{GATEWAY['port']}/v1/chat/completions",
     "api_key": GATEWAY.get("token", ""),
@@ -707,6 +721,18 @@ def _chat_via_cli(messages):
     return None
 
 
+@app.route("/api/lang", methods=["POST"])
+def api_lang():
+    """前端语言切换时通知后端（影响 AI 回复语言）"""
+    global _UI_LANG
+    if request.is_json:
+        lang = request.json.get("lang", "")
+        if lang in ("zh", "en"):
+            _UI_LANG = lang
+            return jsonify({"ok": True, "lang": _UI_LANG})
+    return jsonify({"ok": False}), 400
+
+
 @app.route("/api/chat/config", methods=["GET", "POST"])
 def api_chat_config():
     """读取/更新 AI 聊天配置"""
@@ -777,7 +803,8 @@ def agent_explain_process():
     ram = data.get("ram", "")
     cpu = data.get("cpu", "")
 
-    prompt = f"""请用中文简要介绍以下进程（100字左右）：
+    prompt = f"""{_lang_tag()}
+请简要介绍以下进程（100字左右）：
 进程名: {name}
 PID: {pid}
 内存: {ram or '未知'}
@@ -800,7 +827,8 @@ def agent_explain_software():
     version = data.get("version", "")
     publisher = data.get("publisher", "")
 
-    prompt = f"""请用中文简要介绍以下软件（100字左右）：
+    prompt = f"""{_lang_tag()}
+请简要介绍以下软件（100字左右）：
 软件名: {name}
 {'版本: ' + version if version else ''}
 {'发行商: ' + publisher if publisher else ''}

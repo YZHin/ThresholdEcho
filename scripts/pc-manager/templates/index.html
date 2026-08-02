@@ -177,6 +177,7 @@ a { color:var(--accent);text-decoration:none }
 .clickable-row { cursor:pointer; transition:var(--transition) }
 .clickable-row:hover { color:var(--accent) !important; text-decoration:underline }
 </style>
+<script src="/static/i18n.js"></script>
 </head>
 <body>
 
@@ -184,52 +185,53 @@ a { color:var(--accent);text-decoration:none }
 <aside class="sidebar">
   <div class="logo">🌫️ ThresholdEcho<span>Liminal Guardian</span></div>
   <nav>
-    <a href="#dashboard" class="active" onclick="switchPanel('dashboard')">📊 仪表盘</a>
-    <a href="#hardware" onclick="switchPanel('hardware')">🖥️ 硬件</a>
-    <a href="#storage" onclick="switchPanel('storage')">💾 存储</a>
-    <a href="#software" onclick="switchPanel('software')">📦 软件</a>
-    <a href="#usb" onclick="switchPanel('usb')">🔌 外接设备</a>
-    <a href="#checkup" onclick="switchPanel('checkup')">🏥 一键体检</a>
-    <a href="#cleanup" onclick="switchPanel('cleanup')">🧹 垃圾清理</a>
-    <a href="#security" onclick="switchPanel('security')">🛡️ 安全中心</a>
-    <a href="#network" onclick="switchPanel('network')">🌐 网络</a>
-    <a href="#processes" onclick="switchPanel('processes')">⚙️ 进程</a>
-    <a href="#ai" onclick="switchPanel('ai')">🤖 AI 控制台</a>
+    <a href="#dashboard" class="active" onclick="switchPanel('dashboard')" data-i18n="nav.dashboard">📊 仪表盘</a>
+    <a href="#hardware" onclick="switchPanel('hardware')" data-i18n="nav.hardware">🖥️ 硬件</a>
+    <a href="#storage" onclick="switchPanel('storage')" data-i18n="nav.storage">💾 存储</a>
+    <a href="#software" onclick="switchPanel('software')" data-i18n="nav.software">📦 软件</a>
+    <a href="#usb" onclick="switchPanel('usb')" data-i18n="nav.usb">🔌 外接设备</a>
+    <a href="#checkup" onclick="switchPanel('checkup')" data-i18n="nav.checkup">🏥 一键体检</a>
+    <a href="#cleanup" onclick="switchPanel('cleanup')" data-i18n="nav.cleanup">🧹 垃圾清理</a>
+    <a href="#security" onclick="switchPanel('security')" data-i18n="nav.security">🛡️ 安全中心</a>
+    <a href="#network" onclick="switchPanel('network')" data-i18n="nav.network">🌐 网络</a>
+    <a href="#processes" onclick="switchPanel('processes')" data-i18n="nav.processes">⚙️ 进程</a>
+    <a href="#ai" onclick="switchPanel('ai')" data-i18n="nav.ai">🤖 AI 控制台</a>
   </nav>
   <div class="status-bar">
-    <span class="dot on"></span> 在线 · <span id="lastUpdate">--</span>
+    <span class="dot on"></span> <span data-i18n="status.online">在线</span> · <span id="lastUpdate">--</span>
   </div>
 </aside>
 
 <!-- ═══════════════ 主区域 ═══════════════  -->
 <main class="main" id="mainContent">
   <div class="title-row">
-    <h1>📊 系统仪表盘</h1>
+    <h1>📊 <span data-i18n="title.dashboard">系统仪表盘</span></h1>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-outline" onclick="refreshData()">🔄 刷新</button>
+      <button class="btn btn-outline" onclick="toggleLang()" id="langBtn">🌐 中/EN</button>
+      <button class="btn btn-outline" onclick="refreshData()" data-i18n="btn.refresh">🔄 刷新</button>
     </div>
   </div>
   <div id="dashboard" class="panel active">
     <div class="cards" id="dashCards"></div>
     <div class="detail-card">
-      <h3>实时进程 TOP 5</h3>
+      <h3 data-i18n="dash.topProcesses">实时进程 TOP 5</h3>
       <table class="data-table" id="topProcesses"><tbody></tbody></table>
     </div>
   </div>
 
-  <div id="hardware" class="panel"><div class="detail-card"><h3>硬件详情</h3><div class="cards" id="hwCards"></div></div></div>
-  <div id="storage" class="panel"><div class="detail-card"><h3>磁盘分区</h3><div id="diskList"></div></div><div class="detail-card"><h3>大文件 TOP 10</h3><table class="data-table" id="bigFiles"><tbody></tbody></table></div></div>
-  <div id="software" class="panel"><div class="detail-card"><h3>已安装软件</h3><p class="timestamp" id="swCount"></p><div style="max-height:500px;overflow-y:auto"><table class="data-table" id="swTable"><tbody></tbody></table></div></div><div class="detail-card"><h3>启动项</h3><table class="data-table" id="startupTable"><tbody></tbody></table></div></div>
-  <div id="usb" class="panel"><div class="detail-card"><h3>当前 USB 设备</h3><div id="usbCurrent"></div></div><div class="detail-card"><h3>USB 历史记录</h3><table class="data-table" id="usbHistory"><tbody></tbody></table></div><div class="detail-card"><h3>显示器</h3><div id="monitorList"></div></div></div>
+  <div id="hardware" class="panel"><div class="detail-card"><h3 data-i18n="hw.title">硬件详情</h3><div class="cards" id="hwCards"></div></div></div>
+  <div id="storage" class="panel"><div class="detail-card"><h3 data-i18n="storage.title">磁盘分区</h3><div id="diskList"></div></div><div class="detail-card"><h3 data-i18n="storage.bigFiles">大文件 TOP 10</h3><table class="data-table" id="bigFiles"><tbody></tbody></table></div></div>
+  <div id="software" class="panel"><div class="detail-card"><h3 data-i18n="sw.title">已安装软件</h3><p class="timestamp" id="swCount"></p><div style="max-height:500px;overflow-y:auto"><table class="data-table" id="swTable"><tbody></tbody></table></div></div><div class="detail-card"><h3 data-i18n="sw.startup">启动项</h3><table class="data-table" id="startupTable"><tbody></tbody></table></div></div>
+  <div id="usb" class="panel"><div class="detail-card"><h3 data-i18n="usb.title">当前 USB 设备</h3><div id="usbCurrent"></div></div><div class="detail-card"><h3 data-i18n="usb.history">USB 历史记录</h3><table class="data-table" id="usbHistory"><tbody></tbody></table></div><div class="detail-card"><h3 data-i18n="usb.monitors">显示器</h3><div id="monitorList"></div></div></div>
   <div id="security" class="panel">
-    <div class="detail-card"><h3>Windows Defender</h3><div id="defStatus"></div>
+    <div class="detail-card"><h3 data-i18n="sec.defender">Windows Defender</h3><div id="defStatus"></div>
       <div style="margin-top:12px;display:flex;gap:8px">
         <button class="btn btn-primary" onclick="triggerDefenderScan('QuickScan')">🔍 快速扫描</button>
         <button class="btn btn-outline" onclick="triggerDefenderScan('FullScan')">🔎 全盘扫描 ⚠ 慢</button>
       </div>
     </div>
-    <div class="detail-card"><h3>威胁历史</h3><table class="data-table" id="threatTable"><tbody></tbody></table></div>
-    <div class="detail-card"><h3>防火墙</h3><div id="fwStatus"></div></div>
+    <div class="detail-card"><h3 data-i18n="sec.threats">威胁历史</h3><table class="data-table" id="threatTable"><tbody></tbody></table></div>
+    <div class="detail-card"><h3 data-i18n="sec.firewall">防火墙</h3><div id="fwStatus"></div></div>
   </div>
   <div id="checkup" class="panel">
     <div id="checkupHeader" class="detail-card" style="text-align:center;padding:32px 20px">
@@ -239,13 +241,13 @@ a { color:var(--accent);text-decoration:none }
       <div class="timestamp" id="checkupTs"></div>
       <div id="checkupSummary" style="margin:12px 0;font-size:14px"></div>
       <div style="margin-top:16px;display:flex;gap:8px;justify-content:center">
-        <button class="btn btn-primary" onclick="refreshCheckup()">🔄 重新体检</button>
+        <button class="btn btn-primary" onclick="refreshCheckup()" data-i18n="checkup.recheck">🔄 重新体检</button>
         <button class="btn btn-primary" id="oneClickFixBtn" style="display:none;background:var(--green)" onclick="executeOneClickFix()">✨ 一键修复</button>
       </div>
       <div id="checkupFixProgress" style="display:none;margin-top:16px"></div>
     </div>
-    <div class="detail-card"><h3>📊 各维度评分</h3><div id="checkupItems"></div></div>
-    <div class="detail-card"><h3>💡 优化建议</h3><div id="checkupSuggestions"></div></div>
+    <div class="detail-card"><h3 data-i18n="checkup.dims">📊 各维度评分</h3><div id="checkupItems"></div></div>
+    <div class="detail-card"><h3 data-i18n="checkup.suggestions">💡 优化建议</h3><div id="checkupSuggestions"></div></div>
     <div id="checkupFixReport" class="detail-card" style="display:none"></div>
   </div>
   <div id="cleanup" class="panel">
@@ -256,15 +258,15 @@ a { color:var(--accent);text-decoration:none }
         <div style="font-size:28px;font-weight:700;margin:8px 0" id="cleanupTotalText">--</div>
         <div class="timestamp">可清理垃圾文件总计</div>
         <div style="margin-top:12px">
-          <button class="btn btn-outline btn-sm" onclick="selectAllCleanup(true)">全选</button>
-          <button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="selectAllCleanup(false)">取消全选</button>
+          <button class="btn btn-outline btn-sm" onclick="selectAllCleanup(true)" data-i18n="cleanup.selectAll">全选</button>
+          <button class="btn btn-outline btn-sm" style="margin-left:4px" onclick="selectAllCleanup(false)" data-i18n="cleanup.deselect">取消全选</button>
         </div>
       </div>
       <div class="detail-card">
-        <h3>垃圾分类详情</h3>
+        <h3 data-i18n="cleanup.details">垃圾分类详情</h3>
         <div id="cleanupCategories"></div>
         <div style="margin-top:16px;display:flex;gap:8px">
-          <button class="btn btn-primary" id="cleanupExecuteBtn" onclick="executeCleanup()">🧹 清理选中项</button>
+          <button class="btn btn-primary" id="cleanupExecuteBtn" onclick="executeCleanup()" data-i18n="cleanup.execute">🧹 清理选中项</button>
           <span class="timestamp" style="align-self:center">仅删除选中类别，不删重要文件</span>
         </div>
       </div>
@@ -307,6 +309,7 @@ a { color:var(--accent);text-decoration:none }
 </main>
 
 <script>
+const _t = function(k) { try { return (typeof I18N !== "undefined" && I18N.t) ? I18N.t(k) : k; } catch(e) { return k; } };
 // ═══════════════ 核心 ═══════════════
 const API = '/api/scan';
 let scanCache = null;
@@ -373,12 +376,12 @@ function renderDashboard() {
   const totalDisk = (st.drives||[]).reduce((a,d)=>a + parseFloat(d.total), 0).toFixed(1) + ' GB';
 
   const cards = [
-    {icon:'🧠',label:'CPU',value:cpuName,sub:`${hw.cpu?.cores||'?'} 核 ${hw.cpu?.threads||'?'} 线程`},
+    {icon:'🧠',label:_t('hw.cpu'),value:cpuName,sub:`${hw.cpu?.cores||'?'} ${_t('hw.cores')} ${hw.cpu?.threads||'?'} ${_t('hw.threads')}`},
     {icon:'🎮',label:'GPU',value:gpuNames,sub: (hw.gpu||[])[0]?.vram || '?'},
-    {icon:'🧮',label:'内存',value:hw.memory?.total||'?',sub:`${hw.memory?.sticks||'?'} 条`},
-    {icon:'💿',label:'磁盘总量',value:totalDisk,sub:(st.drives||[]).length+' 个分区'},
-    {icon:'🕐',label:'运行时间',value:sy.uptime||'?',sub:`${sy.os||''} Build ${sy.build||''}`},
-    {icon:'🛡️',label:'Defender',value:se.antivirus?.enabled?'✅ 已启用':'⚠ 未启用',sub:se.antivirus?.enabled?'实时保护中':'请检查'},
+    {icon:'🧮',label:_t('hw.memory'),value:hw.memory?.total||'?',sub:`${hw.memory?.sticks||'?'} ${_t('hw.sticks')}`},
+    {icon:'💿',label:_t('hw.totalDisk'),value:totalDisk,sub:`${(st.drives||[]).length} ${_t('hw.partitions')}`},
+    {icon:'🕐',label:_t('hw.uptime'),value:sy.uptime||'?',sub:`${sy.os||''} Build ${sy.build||''}`},
+    {icon:'🛡️',label:_t('hw.defender'),value:se.antivirus?.enabled?'✅ Enabled':'⚠ Disabled',sub:se.antivirus?.enabled?'Active':'Check'},
   ];
 
   document.getElementById('dashCards').innerHTML = cards.map(c=>`
@@ -923,6 +926,22 @@ function addChatMsg(role, text) {
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 }
+
+// ═══════════════ 语言切换 ═══════════════
+function toggleLang() {
+  if (typeof I18N === 'undefined') return;
+  const next = I18N.current === 'zh' ? 'en' : 'zh';
+  I18N.setLang(next);
+  const btn = document.getElementById('langBtn');
+  if (btn) btn.textContent = next === 'zh' ? '🌐 中/EN' : '🌐 EN/中';
+}
+document.addEventListener('DOMContentLoaded', () => {
+  if (typeof I18N !== 'undefined') {
+    I18N.apply();
+    const btn = document.getElementById('langBtn');
+    if (btn) btn.textContent = I18N.current === 'zh' ? '🌐 中/EN' : '🌐 EN/中';
+  }
+});
 
 // ═══════════════ 启动 ═══════════════
 loadData();
