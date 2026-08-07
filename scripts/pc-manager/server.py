@@ -733,6 +733,21 @@ def api_lang():
     return jsonify({"ok": False}), 400
 
 
+@app.route("/api/detect-lang")
+def api_detect_lang():
+    """自动检测系统 UI 语言（简体中文→zh，其他→en）"""
+    import locale
+    try:
+        lang_code = locale.getdefaultlocale()[0] or ""
+    except Exception:
+        lang_code = ""
+    if not lang_code:
+        lang_code = os.environ.get("LANG", "") or os.environ.get("LC_ALL", "")
+    lang_code = lang_code.lower()
+    detected = "zh" if (lang_code.startswith("zh") and "tw" not in lang_code and "hk" not in lang_code and "mo" not in lang_code) else "en"
+    return jsonify({"detected": detected, "code": lang_code or "unknown"})
+
+
 @app.route("/api/chat/config", methods=["GET", "POST"])
 def api_chat_config():
     """读取/更新 AI 聊天配置"""
@@ -842,6 +857,43 @@ def agent_explain_software():
 
 #  辅助
 # ════════════════════════════════════════════════════════════
+
+# ── 特征软件识别规则（关键词 → 画像标签）────────────
+PERSONA_RULES = [
+    # (标签, 关键词列表, 说明)
+    ("游戏", ["steam", "epic games", "wegame", "游戏", "genshin", "star rail", "崩坏", "原神", "绝区零", "minecraft", "valorant", "lol", "英雄联盟", "dota", "csgo", "counter-strike", "apex", "pubg", "dmm", "galgame", "gal game", "anti-cheat", "anticheat"], "爱玩游戏"),
+    ("开发", ["visual studio", "vscode", "intellij", "pycharm", "jetbrains", "webstorm", "clion", "goland", "android studio", "xcode", "node.js", "python", "jdk", "git", "docker", "vmware", "virtualbox", "wsl", "sublime", "notepad++", "postman", "mysql", "redis", "mongodb", "sqlite", "cmake", "mingw", "rust", "goland"], "喜欢折腾开发"),
+    ("AI工具", ["openclaw", "claude", "chatgpt", "copilot", "deepseek", "doubao", "豆包", "通义", "qwen", "kimi", "gemini", "midjourney", "stable diffusion", "comfyui", "ollama", "lm studio", "sillytavern", "酒馆"], "AI 玩家/重度 AI 用户"),
+    ("设计", ["photoshop", "illustrator", "figma", "sketch", "premiere", "after effects", "daVinci", "blender", "c4d", "cinema 4d", "autocad", "solidworks", "剪映", "canva", "coreldraw"], "设计/创作向"),
+    ("办公", ["office", "word", "excel", "powerpoint", "wps", "outlook", "onenote", "notion", "obsidian", "typora", "有道", "百度网盘", "坚果云", "teams", "zoom", "钉钉", "企业微信"], "办公/效率向"),
+    ("影音", ["potplayer", "vlc", "foobar", "spotify", "网易云", "qq音乐", "酷狗", "bilibili", "哔哩哔哩", "bililive", "obs studio", "剪映专业版", "audacity", "kdenlive"], "影音娱乐向"),
+    ("浏览器", ["chrome", "edge", "firefox", "opera", "brave"], "浏览器重度用户"),
+    ("系统工具", ["ccleaner", "everything", "utorrent", "qbittorrent", "7-zip", "winrar", "powertoys", "watt toolkit", "steam++", "wallpaper engine", "rufus", "hwinfo", "cpuz", "gpuz"], "爱折腾系统"),
+]
+
+
+def _detect_persona(apps: list) -> dict:
+    """根据已安装软件识别用户特征，返回画像"""
+    names = " ".join((a.get("name") or "").lower() for a in apps if isinstance(a, dict))
+    found = []
+    for tag, kws, desc in PERSONA_RULES:
+        if any(k.lower() in names for k in kws):
+            found.append({"tag": tag, "desc": desc})
+    return {
+        "tags": [f["tag"] for f in found],
+        "descriptions": [f["desc"] for f in found],
+        "summary": "、".join(f["desc"] for f in found) if found else "暂未识别到明显特征",
+    }
+
+
+@app.route("/api/personalize")
+def api_personalize():
+    """根据已安装软件返回用户个性化画像"""
+    scan = run_scan(force=False)
+    apps = (scan.get("software") or {}).get("apps", []) if isinstance(scan.get("software"), dict) else []
+    persona = _detect_persona(apps)
+    return jsonify(persona)
+
 
 def _format_bytes(b: int) -> str:
     for unit in ("B", "KB", "MB", "GB", "TB"):

@@ -78,6 +78,7 @@ const I18N = {
       'hw.driver': '驱动',
       'hw.vram': '显存',
       'dash.noData': '无数据',
+      'dash.persona': '🪄 你的电脑画像',
     },
     en: {
       'nav.dashboard': 'Dashboard',
@@ -151,6 +152,7 @@ const I18N = {
       'hw.driver': 'Driver',
       'hw.vram': 'VRAM',
       'dash.noData': 'No data',
+      'dash.persona': '🪄 Your PC Profile',
     }
   },
   t(key, params) {

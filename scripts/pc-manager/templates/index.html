@@ -25,7 +25,7 @@
   --font:       "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
 }
 * { margin:0;padding:0;box-sizing:border-box }
-body { background:var(--bg);color:var(--text);font-family:var(--font);display:flex;min-height:100vh;overflow:hidden }
+body { background:var(--bg);color:var(--text);font-family:var(--font);display:flex;height:100vh;overflow:hidden }
 a { color:var(--accent);text-decoration:none }
 ::-webkit-scrollbar { width:6px }
 ::-webkit-scrollbar-track { background:var(--bg) }
@@ -52,7 +52,14 @@ a { color:var(--accent);text-decoration:none }
 .sidebar .status-bar .dot.off { background:var(--red) }
 
 /* ═══════════════ 主区域 ═══════════ */
-.main { flex:1;overflow-y:auto;padding:28px 32px }
+.main {
+  flex:1;
+  overflow-y:auto;
+  min-height:0;          /* flexbox 滚动关键：允许子项收缩，否则内容撑开容器无法滚动 */
+  height:100vh;
+  padding:28px 32px;
+  overscroll-behavior:contain;
+}
 .main .title-row { display:flex;justify-content:space-between;align-items:center;margin-bottom:24px }
 .main h1 { font-size:22px;font-weight:600 }
 .btn {
@@ -213,6 +220,10 @@ a { color:var(--accent);text-decoration:none }
   </div>
   <div id="dashboard" class="panel active">
     <div class="cards" id="dashCards"></div>
+    <div class="detail-card">
+      <h3 data-i18n="dash.persona">🪄 你的电脑画像</h3>
+      <div id="personaBox" style="font-size:14px;color:var(--text)">正在分析已安装软件...</div>
+    </div>
     <div class="detail-card">
       <h3 data-i18n="dash.topProcesses">实时进程 TOP 5</h3>
       <table class="data-table" id="topProcesses"><tbody></tbody></table>
@@ -400,6 +411,32 @@ function renderDashboard() {
   `).join('') || '<tr><td colspan="3">无数据</td></tr>';
 }
 
+// ── 个性化画像（只加载一次，独立于 dashboard 渲染）──
+let _personaLoaded = false;
+let _personaAppCount = '';
+async function initPersona() {
+  if (_personaLoaded) return;
+  const box = document.getElementById('personaBox');
+  if (!box) return;
+  try {
+    const r = await fetch('/api/personalize');
+    if (!r.ok) throw new Error('bad status');
+    const p = await r.json();
+    const tags = p.tags || [];
+    const chips = tags.map(t => `<span style="display:inline-block;background:var(--accent);color:#fff;border-radius:10px;padding:2px 10px;margin:3px;font-size:12px">${t}</span>`).join('');
+    const appCount = (scanCache && scanCache.software && scanCache.software.count) || '';
+    box.innerHTML = `
+      <div style="margin-bottom:8px">${chips || '<span class="timestamp">暂未识别到明显特征</span>'}</div>
+      <div>${p.summary || ''}</div>
+      <div class="timestamp" style="margin-top:6px">💡 基于已安装的 ${appCount||''} 款软件自动分析</div>`;
+    _personaLoaded = true;
+  } catch (e) {
+    box.innerHTML = `<span class="timestamp">😅 个性化分析暂不可用（${e.message}）</span>`;
+  }
+}
+
+function setPersonaAppCount(n) { /* 兼容保留 */ }
+
 // ── 硬件 ──
 function renderHardware() {
   const hw = scanCache.hardware || {};
@@ -450,6 +487,7 @@ function renderStorage() {
 function renderSoftware() {
   const sw = scanCache.software || {};
   document.getElementById('swCount').textContent = `共 ${sw.count||0} 个软件`;
+  if (typeof setPersonaAppCount === 'function') setPersonaAppCount(sw.count||0);
   document.querySelector('#swTable tbody').innerHTML = '';
   document.querySelector('#startupTable tbody').innerHTML = '';
   (sw.apps||[]).slice(0,30).forEach(a=>{
@@ -940,12 +978,22 @@ document.addEventListener('DOMContentLoaded', () => {
     I18N.apply();
     const btn = document.getElementById('langBtn');
     if (btn) btn.textContent = I18N.current === 'zh' ? '🌐 中/EN' : '🌐 EN/中';
+    // 自动检测系统语言（仅首次使用、用户未手动设置过时生效）
+    if (!localStorage.getItem('te-lang')) {
+      fetch('/api/detect-lang').then(r => r.json()).then(d => {
+        if (d.detected && d.detected !== I18N.current) {
+          I18N.setLang(d.detected);
+          if (btn) btn.textContent = d.detected === 'zh' ? '🌐 中/EN' : '🌐 EN/中';
+        }
+      }).catch(() => {});
+    }
   }
 });
 
 // ═══════════════ 启动 ═══════════════
 loadData();
 loadChatConfig();
+initPersona(); // 画像只加载一次
 setInterval(() => loadData(), 30000); // 每30秒自动刷新
 </script>
 </body>
