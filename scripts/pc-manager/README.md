@@ -13,6 +13,12 @@ Windows 电脑管家千千万，但**会「思考」的不多**。ThresholdEcho 
 
 ---
 
+## 🎬 功能演示
+
+![ThresholdEcho 演示](docs/te_demo.gif)
+
+---
+
 ## ✨ 核心功能
 
 | 模块 | 说明 |
